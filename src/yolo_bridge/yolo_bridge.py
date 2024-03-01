@@ -12,7 +12,7 @@ class Ros2Yolo:
     def __init__(self, node_name="demo_server", name="yolo"):
         self.isaction = rospy.get_param("yolov5/action", False)
         # load param
-        self.model = rospy.get_param("yolov5/model", "yolov5s")
+        self.model = rospy.get_param("yolov5/model", "yolov5n")
         self.device = rospy.get_param("yolov5/device", "gpu")
         self.img_size = rospy.get_param("yolov5/img_size", 640)
 
@@ -38,25 +38,27 @@ class Ros2Yolo:
             print("service mode :", name + "_service")
 
     def load_model(self):
-        self.device = torch.device(
-            "cuda:0" if (self.device != "cpu" and torch.cuda.is_available()) else "cpu"
-        )
+        # self.device = torch.device(
+        #     "cuda:0" if (self.device != "cpu" and torch.cuda.is_available()) else "cpu"
+        # )
+        self.device = torch.device("cpu")
         self.model = torch.hub.load(
-            sys.path[0] + "/../Thirdparty/yolov5",
+            # sys.path[0] + "/../Thirdparty/yolov5",
+            "/home/nros/Leex/Yolov5/src/yolov5",
             "custom",
             source="local",
-            path=sys.path[0] + "/../model/yolov5s.pt",
+            # path=sys.path[0] + "/../model/tello5n.pt",
+            path="/home/nros/Leex/dVINS_ws/src/yolo_ros/model/tello5n.pt",
+            # force_reload=True,
+            device='cpu',
         )
-        self.model = self.model.cuda() if self.device != "cpu" else self.model
+         # 移除了将模型移动到 CUDA 的代码行
+        self.model = self.model.to(self.device)  # 确保模型在正确的设备上
         self.stride = self.model.stride
-        self.img_size = check_img_size(self.img_size, s=self.stride)
-        self.half = self.device.type != "cpu"
-        if self.half:
-            self.model.half()
+        self.img_size = check_img_size(self.img_size, s=self.stride)  # 确保图像尺寸兼容模型的步长
+        # 移除了半精度 (half) 相关的代码，因为 CPU 不支持半精度计算
         self.names = (
-            self.model.module.names
-            if hasattr(self.model, "module")
-            else self.model.names
+            self.model.module.names if hasattr(self.model, "module") else self.model.names
         )
         print("labels: "), self.print_list_multiline(self.names)
         return True
